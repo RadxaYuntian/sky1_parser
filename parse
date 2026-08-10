@@ -80,7 +80,7 @@ SCRIPT_DIR="$(dirname $(realpath "$0"))"
 LOG_DIR="${LOG_DIR:-$SCRIPT_DIR/logs}"
 CURRENT_LOG_DIR="$LOG_DIR/$(date -Iseconds)"
 mkdir -p "$CURRENT_LOG_DIR"
-if ! __mv "$MOUNT_POINT"/EFI/BOOT/*.{log,html} "$CURRENT_LOG_DIR"; then
+if ! __mv "$MOUNT_POINT"/EFI/BOOT/*.log "$CURRENT_LOG_DIR"; then
     echo "错误: 无法移动日志文件。"
     exit 1
 fi
