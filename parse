@@ -21,6 +21,8 @@ __mount() {
         if mount_point="$(LC_ALL=C udisksctl mount --no-user-interaction -b "$block_device" | cut -f 4 -d " ")"; then
             echo "$mount_point"
             return
+        else
+            echo "警告: udisksctl 挂载失败。尝试提权后重新挂载。"
         fi
     fi
     if command -v mount &>/dev/null; then
@@ -39,6 +41,7 @@ __mount() {
 
 __mv() {
     if ! mv "$@"; then
+        echo "警告: 移动失败。尝试提权后重新移动。"
         sudo mv "$@"
     fi
 }
@@ -48,6 +51,8 @@ __unmount() {
     if command -v udisksctl &>/dev/null; then
         if udisksctl unmount --no-user-interaction -b "$mount_point" &>/dev/null; then
             return
+        else
+            echo "警告: udisksctl 卸载失败。尝试提权后重新卸载。"
         fi
     fi
     if command -v umount &>/dev/null; then
