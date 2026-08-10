@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
+shopt -s nullglob
 
 echo "存储设备检测中……"
 MEMTEST_DISK="${1:-/dev/sda}"
@@ -73,6 +74,20 @@ if ! MOUNT_POINT="$(__mount "$MEMTEST_PARTITION")"; then
     exit 1
 fi
 trap "__unmount "$MEMTEST_PARTITION"" SIGINT SIGQUIT SIGTSTP EXIT
+
+echo "日志文件检测中……"
+LOG_EXIST_FLAG=false
+for i in "$MOUNT_POINT"/EFI/BOOT/*.log; do
+    if [[ -f "$i" ]]; then
+        echo "检测到日志文件: $i"
+        LOG_EXIST_FLAG=true
+    fi
+done
+
+if ! $LOG_EXIST_FLAG; then
+    echo "错误: 未检测到日志文件。请确保 MemTest86 已运行并生成日志。"
+    exit 1
+fi
 
 echo "日志文件保存中……"
 SCRIPT_DIR="$(dirname $(realpath "$0"))"
