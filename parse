@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+echo "存储设备检测中……"
+MEMTEST_DISK="${1:-/dev/sda}"
+
+if [[ ! -b "$MEMTEST_DISK" ]]; then
+    echo "错误: $MEMTEST_DISK 是无效的存储设备。"
+    exit 1
+fi
+
+
+if [[ ! -b "${MEMTEST_DISK}1" ]] || [[ ! -b "${MEMTEST_DISK}2" ]] || [[ ! -b "${MEMTEST_DISK}3" ]]; then
+    echo "警告: $MEMTEST_DISK 可能不是合法的 MemTest86 磁盘。"
+fi
+
+__mount() {
+    local block_device="$1" mount_point
+    if command -v udisksctl &>/dev/null; then
+        if mount_point="$(LC_ALL=C udisksctl mount -b "$block_device" | cut -f 4 -d " ")"; then
+            echo "$mount_point"
+        else
+            echo "错误: 无法挂载分区 $block_device。"
+            return 1
+        fi
+    elif command -v mount &>/dev/null; then
+        mount_point="$(mktemp -d)"
+        if sudo mount "$block_device" "$mount_point" &>/dev/null; then
+            echo "$mount_point"
+        else
+            echo "错误: 无法挂载分区 $block_device。"
+            return 1
+        fi
+    else
+        echo "错误: 无法挂载分区。请安装 udisksctl 或 mount。"
+        return 1
+    fi
+}
+
+__mv() {
+    if command -v udisksctl &>/dev/null; then
+        mv "$@"
+    elif command -v mv &>/dev/null; then
+        sudo mv "$@"
+    else
+        echo "错误: 无法移动文件。请安装 udisksctl 或 mv。"
+        return 1
+    fi
+}
+
+__unmount() {
+    local mount_point="$1"
+    if command -v udisksctl &>/dev/null; then
+        if ! udisksctl unmount -b "$mount_point" &>/dev/null; then
+            echo "错误: 无法卸载分区 $mount_point。"
+            return 1
+        fi
+    elif command -v umount &>/dev/null; then
+        if ! sudo umount "$mount_point" &>/dev/null; then
+            echo "错误: 无法卸载分区 $mount_point。"
+            return 1
+        fi
+    else
+        echo "错误: 无法卸载分区。请安装 udisksctl 或 umount。"
+        return 1
+    fi
+}
+
+echo "存储设备挂载中……"
+MEMTEST_PARTITION="${MEMTEST_DISK}1"
+MOUNT_POINT=
+if ! MOUNT_POINT="$(__mount "$MEMTEST_PARTITION")"; then
+    exit 1
+fi
+trap "__unmount "$MEMTEST_PARTITION"" SIGINT SIGQUIT SIGTSTP EXIT
+
+echo "日志文件保存中……"
+SCRIPT_DIR="$(dirname $(realpath "$0"))"
+LOG_DIR="${LOG_DIR:-$SCRIPT_DIR/logs}"
+CURRENT_LOG_DIR="$LOG_DIR/$(date -Iseconds)"
+mkdir -p "$CURRENT_LOG_DIR"
+if ! __mv "$MOUNT_POINT"/EFI/BOOT/*.{log,html} "$CURRENT_LOG_DIR"; then
+    echo "错误: 无法移动日志文件。"
+    exit 1
+fi
+__unmount "$MEMTEST_PARTITION"
+trap - SIGINT SIGQUIT SIGTSTP EXIT
+
+echo "日志文件分析中……"
+MEM_CHANNEL=()
+while read -r; do
+    MEM_CHIP=
+    MEM_CHIP="$($SCRIPT_DIR/get_channel_id "0x$REPLY")"
+    MEM_CHANNEL["$MEM_CHIP"]="$MEM_CHIP"
+done < <(grep -h 'MEM ERROR - Data' "$CURRENT_LOG_DIR"/*.log | cut -d ' ' -f 13 | tr -d ",")
+
+if (( ${#MEM_CHANNEL[@]} == 0 )); then
+    echo "日志没有检测到内存错误。"
+else
+    echo "以下${#MEM_CHANNEL[@]}块芯片[范围：0-3]检测出内存问题：" "${MEM_CHANNEL[@]}"
+fi
