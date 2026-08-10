@@ -19,7 +19,7 @@ fi
 __mount() {
     local block_device="$1" mount_point
     if command -v udisksctl &>/dev/null; then
-        if mount_point="$(LC_ALL=C udisksctl mount --no-user-interaction -b "$block_device" | cut -f 4 -d " ")"; then
+        if mount_point="$(LC_ALL=C udisksctl mount --no-user-interaction -b "$block_device" 2>/dev/null | cut -f 4 -d " ")"; then
             echo "$mount_point"
             return
         else
@@ -79,7 +79,6 @@ echo "日志文件检测中……"
 LOG_EXIST_FLAG=false
 for i in "$MOUNT_POINT"/EFI/BOOT/*.log; do
     if [[ -f "$i" ]]; then
-        echo "检测到日志文件: $i"
         LOG_EXIST_FLAG=true
     fi
 done
