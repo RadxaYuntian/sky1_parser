@@ -18,13 +18,12 @@ fi
 __mount() {
     local block_device="$1" mount_point
     if command -v udisksctl &>/dev/null; then
-        if mount_point="$(LC_ALL=C udisksctl mount -b "$block_device" | cut -f 4 -d " ")"; then
+        if mount_point="$(LC_ALL=C udisksctl mount --no-user-interaction -b "$block_device" | cut -f 4 -d " ")"; then
             echo "$mount_point"
-        else
-            echo "错误: 无法挂载分区 $block_device。"
-            return 1
+            return
         fi
-    elif command -v mount &>/dev/null; then
+    fi
+    if command -v mount &>/dev/null; then
         mount_point="$(mktemp -d)"
         if sudo mount "$block_device" "$mount_point" &>/dev/null; then
             echo "$mount_point"
@@ -39,24 +38,19 @@ __mount() {
 }
 
 __mv() {
-    if command -v udisksctl &>/dev/null; then
-        mv "$@"
-    elif command -v mv &>/dev/null; then
+    if ! mv "$@"; then
         sudo mv "$@"
-    else
-        echo "错误: 无法移动文件。请安装 udisksctl 或 mv。"
-        return 1
     fi
 }
 
 __unmount() {
     local mount_point="$1"
     if command -v udisksctl &>/dev/null; then
-        if ! udisksctl unmount -b "$mount_point" &>/dev/null; then
-            echo "错误: 无法卸载分区 $mount_point。"
-            return 1
+        if udisksctl unmount --no-user-interaction -b "$mount_point" &>/dev/null; then
+            return
         fi
-    elif command -v umount &>/dev/null; then
+    fi
+    if command -v umount &>/dev/null; then
         if ! sudo umount "$mount_point" &>/dev/null; then
             echo "错误: 无法卸载分区 $mount_point。"
             return 1
