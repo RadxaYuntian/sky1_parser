@@ -58,7 +58,7 @@ __mount() {
 }
 
 __mv() {
-    if ! mv "$@"; then
+    if ! mv "$@" &>/dev/null; then
         warn "警告: 移动失败。尝试提权后重新移动。"
         sudo mv "$@"
     fi
