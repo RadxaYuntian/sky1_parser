@@ -3,14 +3,20 @@
 set -euo pipefail
 shopt -s nullglob
 
-echo "存储设备检测中……"
+DEBUG="${DEBUG:-false}"
+debug() {
+    if [[ "$DEBUG" == "true" ]]; then
+        echo "$@" >&2
+    fi
+}
+
+debug "存储设备检测中……"
 MEMTEST_DISK="${1:-/dev/sda}"
 
 if [[ ! -b "$MEMTEST_DISK" ]]; then
     echo "错误: $MEMTEST_DISK 是无效的存储设备。" >&2
     exit 1
 fi
-
 
 if [[ ! -b "${MEMTEST_DISK}1" ]] || [[ ! -b "${MEMTEST_DISK}2" ]] || [[ ! -b "${MEMTEST_DISK}3" ]]; then
     echo "警告: $MEMTEST_DISK 可能不是合法的 MemTest86 磁盘。" >&2
@@ -67,7 +73,7 @@ __unmount() {
     fi
 }
 
-echo "存储设备挂载中……"
+debug "存储设备挂载中……"
 MEMTEST_PARTITION="${MEMTEST_DISK}1"
 MOUNT_POINT=
 if ! MOUNT_POINT="$(__mount "$MEMTEST_PARTITION")"; then
@@ -75,7 +81,7 @@ if ! MOUNT_POINT="$(__mount "$MEMTEST_PARTITION")"; then
 fi
 trap "__unmount "$MEMTEST_PARTITION"" SIGINT SIGQUIT SIGTSTP EXIT
 
-echo "日志文件检测中……"
+debug "日志文件检测中……"
 LOG_EXIST_FLAG=false
 for i in "$MOUNT_POINT"/EFI/BOOT/*.log; do
     if [[ -f "$i" ]]; then
@@ -88,7 +94,7 @@ if ! $LOG_EXIST_FLAG; then
     exit 1
 fi
 
-echo "日志文件保存中……"
+debug "日志文件保存中……"
 SCRIPT_DIR="$(dirname $(realpath "$0"))"
 LOG_DIR="${LOG_DIR:-$SCRIPT_DIR/logs}"
 CURRENT_LOG_DIR="$LOG_DIR/$(date -Iseconds)"
@@ -100,7 +106,7 @@ fi
 __unmount "$MEMTEST_PARTITION"
 trap - SIGINT SIGQUIT SIGTSTP EXIT
 
-echo "日志文件分析中……"
+debug "日志文件分析中……"
 MEM_CHANNEL=()
 while read -r; do
     MEM_CHIP=
