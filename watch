@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+MEMTEST_DISK="${1:-/dev/sda}"
+SCRIPT_DIR="$(dirname $(realpath "$0"))"
+
+wait_disk() {
+    while [[ ! -b "$MEMTEST_DISK" ]]; do
+        sleep 1
+    done
+}
+
+wait_disk_removal() {
+    sudo inotifywait -qq -e delete_self "$1"
+}
+
+try_memtest_disk() {
+    echo "提示: 等待磁盘插入……" >&2
+    wait_disk "$1"
+    "$SCRIPT_DIR"/parse "$1"
+    echo "提示: 日志分析完成，请移除磁盘。" >&2
+    wait_disk_removal "$1"
+}
+
+while true; do
+    try_memtest_disk "$MEMTEST_DISK"
+done
