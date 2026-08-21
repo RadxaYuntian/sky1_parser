@@ -16,7 +16,7 @@ wait_disk_removal() {
 try_memtest_disk() {
     echo "提示: 等待磁盘插入……" >&2
     wait_disk "$1"
-    "$SCRIPT_DIR"/parse "$1"
+    LOG_LEVEL=3 "$SCRIPT_DIR"/parse "$1"
     echo "提示: 日志分析完成，请移除磁盘。" >&2
     wait_disk_removal "$1"
 }
