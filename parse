@@ -118,15 +118,4 @@ __unmount "$MEMTEST_PARTITION"
 trap - SIGINT SIGQUIT SIGTSTP EXIT
 
 debug "日志文件分析中……"
-MEM_CHANNEL=()
-while read -r; do
-    MEM_CHIP=
-    MEM_CHIP="$($SCRIPT_DIR/get_channel_id "0x$REPLY")"
-    MEM_CHANNEL["$MEM_CHIP"]="$MEM_CHIP"
-done < <(grep -h 'MEM ERROR - Data' "$CURRENT_LOG_DIR"/*.log | cut -d ' ' -f 13 | tr -d ",")
-
-if (( ${#MEM_CHANNEL[@]} == 0 )); then
-    echo "日志没有检测到内存错误。"
-else
-    echo "以下${#MEM_CHANNEL[@]}块芯片[范围：0-3]检测出内存问题：" "${MEM_CHANNEL[@]}"
-fi
+"$SCRIPT_DIR/parse_log" "$CURRENT_LOG_DIR"/*.log

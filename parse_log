@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+shopt -s nullglob
+
+SCRIPT_DIR="$(dirname $(realpath "$0"))"
+
+MEM_CHANNEL=()
+while read -r; do
+    MEM_CHIP=
+    MEM_CHIP="$($SCRIPT_DIR/get_channel_id "0x$REPLY")"
+    MEM_CHANNEL["$MEM_CHIP"]="$MEM_CHIP"
+done < <(grep -h 'MEM ERROR - Data' "$@" | cut -d ' ' -f 13 | tr -d ",")
+
+if (( ${#MEM_CHANNEL[@]} == 0 )); then
+    echo "日志没有检测到内存错误。"
+else
+    echo "以下${#MEM_CHANNEL[@]}块芯片[范围：0-3]检测出内存问题：" "${MEM_CHANNEL[@]}"
+fi
