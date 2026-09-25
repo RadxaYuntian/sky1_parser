@@ -12,8 +12,14 @@ while read -r; do
     MEM_CHANNEL["$MEM_CHIP"]="$MEM_CHIP"
 done < <(grep -h 'MEM ERROR - Data' "$@" | cut -d ' ' -f 13 | tr -d ",")
 
+BOOT_COUNT=0
+if ! BOOT_COUNT=$(grep "Attempting to retrieve the root directory of the data partition." "$@" | wc -l); then
+    echo "日志中未检测到 MemTest86 启动。"
+    exit 1
+fi
+
 if (( ${#MEM_CHANNEL[@]} == 0 )); then
-    echo "日志没有检测到内存错误。"
+    echo "启动次数: $BOOT_COUNT。日志没有检测到内存错误。"
 else
-    echo "以下${#MEM_CHANNEL[@]}块芯片[范围：0-3]检测出内存问题：" "${MEM_CHANNEL[@]}"
+    echo "启动次数: $BOOT_COUNT。以下${#MEM_CHANNEL[@]}块芯片[范围：0-3]检测出内存问题：" "${MEM_CHANNEL[@]}"
 fi
