@@ -10,10 +10,10 @@ while read -r; do
     MEM_CHIP=
     MEM_CHIP="$($SCRIPT_DIR/get_channel_id "0x$REPLY")"
     MEM_CHANNEL["$MEM_CHIP"]="$MEM_CHIP"
-done < <(grep -h 'MEM ERROR - Data' "$@" | cut -d ' ' -f 13 | tr -d ",")
+done < <(grep --text -h 'MEM ERROR - Data' "$@" | cut -d ' ' -f 13 | tr -d ",")
 
 BOOT_COUNT=0
-if ! BOOT_COUNT=$(grep "Attempting to retrieve the root directory of the data partition." "$@" | wc -l); then
+if ! BOOT_COUNT=$(grep --text -h "Attempting to retrieve the root directory of the data partition." "$@" | wc -l); then
     echo "日志中未检测到 MemTest86 启动。"
     exit 1
 fi
