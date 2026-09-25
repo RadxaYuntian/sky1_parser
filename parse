@@ -105,17 +105,22 @@ if ! $LOG_EXIST_FLAG; then
     exit 1
 fi
 
-debug "日志文件保存中……"
 SCRIPT_DIR="$(dirname $(realpath "$0"))"
-LOG_DIR="${LOG_DIR:-$SCRIPT_DIR/logs}"
-CURRENT_LOG_DIR="$LOG_DIR/$(date -Iseconds)"
-mkdir -p "$CURRENT_LOG_DIR"
-if ! __mv "$MOUNT_POINT"/EFI/BOOT/*.log "$CURRENT_LOG_DIR"; then
-    error "错误: 无法移动日志文件。"
-    exit 1
+if [[ $NO_COPY == "true" ]]; then
+    debug "日志文件保存已关闭，不会移动日志文件。"
+    CURRENT_LOG_DIR="$MOUNT_POINT/EFI/BOOT"
+else
+    debug "日志文件保存中……"
+    LOG_DIR="${LOG_DIR:-$SCRIPT_DIR/logs}"
+    CURRENT_LOG_DIR="$LOG_DIR/$(date -Iseconds)"
+    mkdir -p "$CURRENT_LOG_DIR"
+    if ! __mv "$MOUNT_POINT"/EFI/BOOT/*.log "$CURRENT_LOG_DIR"; then
+        error "错误: 无法移动日志文件。"
+        exit 1
+    fi
+    __unmount "$MEMTEST_PARTITION"
+    trap - SIGINT SIGQUIT SIGTSTP EXIT
 fi
-__unmount "$MEMTEST_PARTITION"
-trap - SIGINT SIGQUIT SIGTSTP EXIT
 
 debug "日志文件分析中……"
 "$SCRIPT_DIR/parse_log" "$CURRENT_LOG_DIR"/*.log
