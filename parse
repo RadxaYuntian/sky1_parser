@@ -106,6 +106,7 @@ if ! $LOG_EXIST_FLAG; then
 fi
 
 SCRIPT_DIR="$(dirname $(realpath "$0"))"
+NO_COPY="${NO_COPY:-false}"
 if [[ $NO_COPY == "true" ]]; then
     debug "日志文件保存已关闭，不会移动日志文件。"
     CURRENT_LOG_DIR="$MOUNT_POINT/EFI/BOOT"
