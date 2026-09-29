@@ -21,6 +21,11 @@ try_memtest_disk() {
     wait_disk_removal "$1"
 }
 
+if ! command -v inotifywait &>/dev/null; then
+    echo "错误: inotifywait 未安装。请安装 inotify-tools，或运行\`nix develop\`。" >&2
+    exit 1
+fi
+
 while true; do
     try_memtest_disk "$MEMTEST_DISK"
 done
