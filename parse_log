@@ -1,28 +1,48 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
 
-set -euo pipefail
-shopt -s nullglob
+from contextlib import nullcontext
+import sys
 
-SCRIPT_DIR="$(dirname $(realpath "$0"))"
+def get_channel_id(paddr):
+    addr = paddr & 0xFFFFFFFF80
+    bit0 = 0
+    bit1 = 0
+    while addr != 0:
+        bit0 = bit0 ^ (addr & 1)
+        addr = addr >> 1
+        bit1 = bit1 ^ (addr & 1)
+        addr = addr >> 1
+    return ((bit1 << 1) | bit0)
 
-MEM_CHANNEL=()
-while read -r; do
-    MEM_CHIP=
-    if ! MEM_CHIP="$($SCRIPT_DIR/get_channel_id "0x$(cut -d ' ' -f 13 <<< "$REPLY" | tr -d ",")" 2>/dev/null)"; then
-        echo "错误: 无法解析的日志: $REPLY" >&2
-        continue
-    fi
-    MEM_CHANNEL["$MEM_CHIP"]="$MEM_CHIP"
-done < <(grep --text -h 'MEM ERROR - Data' "$@")
+def main():
+    mem_channels = set()
+    boot_count = 0
+    for filename in sys.argv[1:] or ["-"]:
+        source = nullcontext(sys.stdin.buffer) if filename == "-" else open(filename, "rb")
+        with source as log:
+            for line in log:
+                if b"Attempting to retrieve the root directory of the data partition." in line:
+                    boot_count += 1
+                if b"MEM ERROR - Data" not in line:
+                    continue
+                line = line.rstrip(b"\n").replace(b"\0", b"")
+                fields = line.split(b" ")
+                address = b"0x" + fields[12].replace(b',', b'')
+                try:
+                    mem_channels.add(get_channel_id(int(address, 16)))
+                except ValueError:
+                    sys.stderr.buffer.write("错误: 无法解析的日志: ".encode() + line + b"\n")
 
-BOOT_COUNT=0
-if ! BOOT_COUNT=$(grep --text -h "Attempting to retrieve the root directory of the data partition." "$@" | wc -l); then
-    echo "日志中未检测到 MemTest86 启动。"
-    exit 1
-fi
+    if boot_count == 0:
+        print("日志中未检测到 MemTest86 启动。")
+        return 1
+    if not mem_channels:
+        print(f"启动次数: {boot_count}。日志没有检测到内存错误。")
+    else:
+        print(f"启动次数: {boot_count}。以下{len(mem_channels)}块芯片[范围：0-3]检测出内存问题：",
+              *sorted(mem_channels))
+    return 0
 
-if (( ${#MEM_CHANNEL[@]} == 0 )); then
-    echo "启动次数: $BOOT_COUNT。日志没有检测到内存错误。"
-else
-    echo "启动次数: $BOOT_COUNT。以下${#MEM_CHANNEL[@]}块芯片[范围：0-3]检测出内存问题：" "${MEM_CHANNEL[@]}"
-fi
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -10,7 +10,7 @@
 
 ### `parse_log`
 
-实际的日志分析脚本。接受日志文件路径作为参数，调用`get_channel_id`进行解析，并返回`parse`打印的结果。
+实际的日志分析脚本。接受日志文件路径作为参数，并返回`parse`打印的结果。
 
 ### `get_channel_id`
 
@@ -26,7 +26,7 @@
 
 ```bash
 sudo apt update
-sudo apt install inotify-tools git
+sudo apt install inotify-tools git python3
 git clone https://github.com/RadxaYuntian/sky1_parser.git
 # optionally, set up passwordless sudo if udisksctl is nott working
 sky1_parser/watch

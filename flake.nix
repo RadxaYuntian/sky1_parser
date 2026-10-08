@@ -16,6 +16,7 @@
           inputs.nixpkgs.legacyPackages.${system}.mkShellNoCC {
             buildInputs = with inputs.nixpkgs.legacyPackages.${system}; [
               inotify-tools
+              python3
             ];
           };
       });
