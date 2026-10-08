@@ -8,9 +8,12 @@ SCRIPT_DIR="$(dirname $(realpath "$0"))"
 MEM_CHANNEL=()
 while read -r; do
     MEM_CHIP=
-    MEM_CHIP="$($SCRIPT_DIR/get_channel_id "0x$REPLY")"
+    if ! MEM_CHIP="$($SCRIPT_DIR/get_channel_id "0x$(cut -d ' ' -f 13 <<< "$REPLY" | tr -d ",")" 2>/dev/null)"; then
+        echo "错误: 无法解析的日志: $REPLY" >&2
+        continue
+    fi
     MEM_CHANNEL["$MEM_CHIP"]="$MEM_CHIP"
-done < <(grep --text -h 'MEM ERROR - Data' "$@" | cut -d ' ' -f 13 | tr -d ",")
+done < <(grep --text -h 'MEM ERROR - Data' "$@")
 
 BOOT_COUNT=0
 if ! BOOT_COUNT=$(grep --text -h "Attempting to retrieve the root directory of the data partition." "$@" | wc -l); then
